@@ -346,7 +346,15 @@ public final class JInputHook {
             throw new IllegalStateException("JInputHook not initialized.");
         }
         synchronized (INSTANCE.shortcutListeners) {
-            return INSTANCE.shortcutListeners.remove(shortcut, listener);
+            Set<ShortcutListener> listeners = INSTANCE.shortcutListeners.get(shortcut);
+            if (listeners != null) {
+                boolean result = listeners.remove(listener);
+                if (result && listeners.isEmpty()) {
+                    INSTANCE.shortcutListeners.remove(shortcut);
+                }
+                return result;
+            }
+            return false;
         }
     }
 
@@ -356,11 +364,19 @@ public final class JInputHook {
         }
         synchronized (INSTANCE.shortcutListeners) {
             boolean removed = false;
+            Set<Shortcut> toRemove = new HashSet();
             for (Entry<Shortcut, Set<ShortcutListener>> entry : INSTANCE.shortcutListeners.entrySet()) {
                 if (entry.getValue().remove(listener)) {
                     removed = true;
+                    if (entry.getValue().isEmpty()) {
+                        toRemove.add(entry.getKey());
+                    }
                 }
             }
+            for (Shortcut shortcut : toRemove) {
+                INSTANCE.shortcutListeners.remove(shortcut);
+            }
+
             return removed;
         }
     }

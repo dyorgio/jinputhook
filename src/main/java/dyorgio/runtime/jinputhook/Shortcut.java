@@ -15,16 +15,14 @@
  ***************************************************************************** */
 package dyorgio.runtime.jinputhook;
 
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Objects;
 import java.util.Set;
-import java.util.function.Supplier;
-import java.util.stream.Collectors;
 import net.java.games.input.Component.Identifier.Key;
 
 /**
@@ -42,17 +40,15 @@ public final class Shortcut {
             throw new IllegalArgumentException("Shortcut must have 2 or more keys.");
         }
 
-        this.keys.addAll(keys.stream().sorted(new Comparator<Key>() {
+        Key[] keysList = keys.toArray(new Key[0]);
+
+        Arrays.sort(keysList, new Comparator<Key>() {
             @Override
             public int compare(Key k1, Key k2) {
                 return k1.getName().compareTo(k2.getName());
             }
-        }).collect(Collectors.toCollection(new Supplier<Collection<Key>>() {
-            @Override
-            public Collection<Key> get() {
-                return new ArrayList();
-            }
-        })));
+        });
+        this.keys.addAll(Arrays.asList(keysList));
     }
 
     @Override
@@ -76,7 +72,7 @@ public final class Shortcut {
 
     @Override
     public String toString() {
-        return keys.toString(); //To change body of generated methods, choose Tools | Templates.
+        return keys.toString();
     }
 
     public static Shortcut fromKeys(Collection<Key> keys) {
