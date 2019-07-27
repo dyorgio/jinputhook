@@ -57,6 +57,8 @@ Maven
 </dependency>
 ```
 
+Windows
+-----
 On Windows, include JNA as dependency.
 ```xml
 <dependency>
@@ -64,4 +66,16 @@ On Windows, include JNA as dependency.
     <artifactId>jna-platform</artifactId>
     <version>${your.jna.version}</version>
 </dependency>
+```
+
+Linux
+-----
+On Linux you need to adjust permissions of /dev/input/event* to can read:
+```bash
+sudo chmod o+r /dev/input/event*
+```
+
+Or, according with distro, create a new dev rule file on /etc/udev/rules.d/YOUR-FILE-NAME.rules:
+```txt
+SUBSYSTEMS=="input", KERNEL=="event*", MODE="644"
 ```
