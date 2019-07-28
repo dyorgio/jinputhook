@@ -54,6 +54,10 @@ Maven
     <groupId>com.github.dyorgio.runtime</groupId>
     <artifactId>jinputhook</artifactId>
     <version>1.0.0</version>
+    <!-- Optional classifier by OS, don't use classifier to support ALL -->
+    <!--<classifier>mac-universal</classifier>-->
+    <!--<classifier>linux-universal</classifier>-->
+    <!--<classifier>win-universal</classifier>-->
 </dependency>
 ```
 
