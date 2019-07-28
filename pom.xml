@@ -11,7 +11,7 @@
     
     <name>JInputHook</name>
 
-    <description>An alternative to jnativehook based on JInput.</description>
+    <description>Global Key and Shortcuts listeners for Java.</description>
     
     <url>https://github.com/dyorgio/jinputhook</url>
     
