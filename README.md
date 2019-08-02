@@ -53,7 +53,7 @@ Maven
 <dependency>
     <groupId>com.github.dyorgio.runtime</groupId>
     <artifactId>jinputhook</artifactId>
-    <version>1.0.0</version>
+    <version>1.0.1</version>
     <!-- Optional classifier by OS, don't use classifier to support ALL -->
     <!--<classifier>mac-universal</classifier>-->
     <!--<classifier>linux-universal</classifier>-->
@@ -81,5 +81,5 @@ sudo chmod o+r /dev/input/event*
 
 Or, according with distro, create a new dev rule file on /etc/udev/rules.d/YOUR-FILE-NAME.rules:
 ```txt
-SUBSYSTEMS=="input", KERNEL=="event*", MODE="644"
+SUBSYSTEM=="input", KERNEL=="event*", MODE="644"
 ```

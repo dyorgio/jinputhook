@@ -1,10 +1,10 @@
 package dyorgio.runtime.jinputhook.cleaner;
 
+import dyorgio.runtime.jinputhook.OSDetector;
 import java.lang.reflect.Field;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.IdentityHashMap;
-import java.util.Locale;
 import java.util.Set;
 
 /**
@@ -16,13 +16,13 @@ public abstract class JInputCleaner {
     private static final JInputCleaner INSTANCE;
 
     static {
-        String OS = System.getProperty("os.name", "generic").toLowerCase(Locale.ENGLISH);
-        if ((OS.contains("mac")) || (OS.contains("darwin"))) {
+        OSDetector.detect();
+        if (OSDetector.isMac()) {
             // do nothing on macOS (no leaks)
             INSTANCE = new DummyJInputCleaner();
-        } else if (OS.contains("win")) {
+        } else if (OSDetector.isWindows()) {
             INSTANCE = new WinJInputCleaner();
-        } else if (OS.contains("nux")) {
+        } else if (OSDetector.isLinux()) {
             INSTANCE = new LinuxJInputCleaner();
         } else {
             INSTANCE = new DummyJInputCleaner();

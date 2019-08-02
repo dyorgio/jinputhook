@@ -27,7 +27,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
@@ -46,6 +45,7 @@ import net.java.games.input.EventQueue;
 import net.java.games.input.Keyboard;
 import static dyorgio.runtime.jinputhook.Shortcut.fromKeys;
 import java.util.Map.Entry;
+import net.java.games.input.Component;
 
 /**
  *
@@ -155,7 +155,9 @@ public final class JInputHook {
                 List<Keyboard> localKeyboards = new ArrayList();
                 for (Controller controller : getDefaultEnvironment().getControllers()) {
                     if (controller.getType() == Controller.Type.KEYBOARD) {
-                        localKeyboards.add((Keyboard) controller);
+                        if (controller.getComponents() != null && controller.getComponents().length > 5) {
+                            localKeyboards.add((Keyboard) controller);
+                        }
                     }
                 }
 
@@ -167,6 +169,7 @@ public final class JInputHook {
                             if (state.keyboard.getName().equals(keyboard.getName())) {
                                 currentState = new KeyboardState(keyboard);
                                 currentState.keysPressed.addAll(state.keysPressed);
+                                currentState.eventQueue.updateQueue(keyboard);
                                 break;
                             }
                         }
@@ -191,9 +194,9 @@ public final class JInputHook {
                             public void run() {
                                 final Event event = new Event();
                                 boolean updateDevices;
-                                int loopingCount;
+                                int loopingCount = 0;
                                 Keyboard keyboard;
-                                EventQueue eventQueue;
+                                KeyboardEventQueue eventQueue;
 
                                 while (!isInterrupted()) {
                                     synchronized (JInputHook.this) {
@@ -201,10 +204,10 @@ public final class JInputHook {
                                         for (KeyboardState keyboardState : keyboardStates) {
                                             try {
                                                 keyboard = keyboardState.keyboard;
-                                                eventQueue = keyboard.getEventQueue();
+                                                eventQueue = keyboardState.eventQueue;
                                                 if (keyboard.poll()) {
+                                                    loopingCount = 0;
                                                     if (eventQueue.getNextEvent(event)) {
-                                                        loopingCount = 0;
                                                         do {
                                                             loopingCount++;
                                                             Key key = (Key) event.getComponent().getIdentifier();
@@ -218,7 +221,7 @@ public final class JInputHook {
                                                                 keyboardState.keysPressed.remove(key);
                                                                 fireKeyReleased(key);
                                                             }
-                                                        } while (loopingCount < 10 && eventQueue.getNextEvent(event));
+                                                        } while (loopingCount < 1000 && eventQueue.getNextEvent(event));
                                                     }
                                                 } else {
                                                     updateDevices = true;
@@ -232,7 +235,11 @@ public final class JInputHook {
                                         }
                                     }
                                     try {
-                                        sleep(0, 1);
+                                        if (OSDetector.isLinux() && loopingCount == 0) {
+                                            sleep(10);
+                                        } else {
+                                            sleep(0, 1);
+                                        }
                                     } catch (InterruptedException ex) {
                                         Thread.currentThread().interrupt();
                                         break;
@@ -275,14 +282,13 @@ public final class JInputHook {
         }
         // extract plataform natives
         boolean extractOk = false;
-        boolean is64Bits = System.getenv("ProgramFiles(x86)") != null || System.getProperty("os.arch", "x86").contains("64");
-        String OS = System.getProperty("os.name", "generic").toLowerCase(Locale.ENGLISH);
-        if ((OS.contains("mac")) || (OS.contains("darwin"))) {
+        OSDetector.detect();
+        if (OSDetector.isMac()) {
             extractOk = extractMacNatives();
-        } else if (OS.contains("win")) {
-            extractOk = extractWindowsNatives(is64Bits);
-        } else if (OS.contains("nux")) {
-            extractOk = extractLinuxNatives(is64Bits);
+        } else if (OSDetector.isWindows()) {
+            extractOk = extractWindowsNatives();
+        } else if (OSDetector.isLinux()) {
+            extractOk = extractLinuxNatives();
         }
 
         if (!extractOk) {
@@ -385,22 +391,22 @@ public final class JInputHook {
         return extractNative("/libjinput-osx.jnilib", System.mapLibraryName("jinput-osx"));
     }
 
-    private static final boolean extractWindowsNatives(boolean is64Bits) {
-        if (is64Bits) {
-            if (extractNative("/jinput-dx8_64.dll")) {
-                return extractNative("/jinput-raw_64.dll");
+    private static final boolean extractWindowsNatives() {
+        if (OSDetector.isOSx86()) {
+            if (extractNative("/jinput-dx8.dll")) {
+                return extractNative("/jinput-raw.dll");
             }
-        } else if (extractNative("/jinput-dx8.dll")) {
-            return extractNative("/jinput-raw.dll");
+        } else if (extractNative("/jinput-dx8_64.dll")) {
+            return extractNative("/jinput-raw_64.dll");
         }
         return false;
     }
 
-    private static final boolean extractLinuxNatives(boolean is64Bits) {
-        if (is64Bits) {
-            return extractNative("/libjinput-linux64.so");
-        } else {
+    private static final boolean extractLinuxNatives() {
+        if (OSDetector.isOSx86()) {
             return extractNative("/libjinput-linux.so");
+        } else {
+            return extractNative("/libjinput-linux64.so");
         }
     }
 
@@ -416,22 +422,17 @@ public final class JInputHook {
                 File nativeFile = new File(".", name);
                 if (!nativeFile.exists()) {
                     File tmpDir = Files.createTempDirectory("JInputHook-").toFile();
-//                    tmpDir.deleteOnExit();
+                    tmpDir.deleteOnExit();
                     System.setProperty("net.java.games.input.librarypath", tmpDir.getAbsolutePath());
                     nativeFile = new File(tmpDir, name);
-//                    System.err.println("extracting " + name + "...");
                     try (FileOutputStream outputStream = new FileOutputStream(nativeFile)) {
                         final byte[] array = new byte[8192];
                         for (int i = inputStream.read(array); i != -1; i = inputStream.read(array)) {
                             outputStream.write(array, 0, i);
                         }
                     }
-//                    nativeFile.deleteOnExit();
+                    nativeFile.deleteOnExit();
                 }
-//                else {
-//                    System.err.println("Using " + name + " found in folder.");
-//            }
-
                 return true;
             }
         } catch (final Throwable e) {
@@ -444,9 +445,81 @@ public final class JInputHook {
 
         private final Keyboard keyboard;
         private final Set<Key> keysPressed = new HashSet();
+        private final KeyboardEventQueue eventQueue;
 
         private KeyboardState(Keyboard keyboard) {
             this.keyboard = keyboard;
+            if (OSDetector.isLinux()) {
+                eventQueue = new PollKeyboardEventQueue();
+            } else {
+                eventQueue = new JInputKeyboardEventQueue();
+            }
+            eventQueue.updateQueue(keyboard);
+        }
+    }
+
+    private static interface KeyboardEventQueue {
+
+        void updateQueue(Keyboard keyboard);
+
+        boolean getNextEvent(Event event);
+    }
+
+    private static class PollKeyboardEventQueue implements KeyboardEventQueue {
+
+        private Component[] components;
+        private float[] previousValues;
+        private int lastIndex = 0;
+        private float lastValue;
+
+        @Override
+        public void updateQueue(Keyboard keyboard) {
+            this.components = keyboard.getComponents();
+            if (previousValues == null || previousValues.length != components.length) {
+                previousValues = new float[components.length];
+                if (keyboard.poll()) {
+                    for (int i = 0; i < components.length; i++) {
+                        previousValues[i] = components[i].getPollData();
+                    }
+                }
+            }
+            lastIndex = 0;
+        }
+
+        @Override
+        public boolean getNextEvent(Event event) {
+            for (int i = lastIndex; i < components.length; i++) {
+                lastValue = components[i].getPollData();
+                if (lastValue != previousValues[i]) {
+                    event.set(components[i], lastValue, 0); // dont generate timestamp for performance reasons (last parameter)
+                    previousValues[i] = lastValue;
+                    i++;
+                    if (i == components.length) {
+                        i = 0;
+                    }
+                    lastIndex = i;
+                    return true;
+                }
+            }
+
+            lastIndex = 0;
+            return false;
+        }
+
+    }
+
+    private static class JInputKeyboardEventQueue implements KeyboardEventQueue {
+
+        private EventQueue eventQueue;
+
+        @Override
+        public void updateQueue(Keyboard keyboard) {
+            this.eventQueue = keyboard.getEventQueue();
+        }
+
+        @Override
+        public boolean getNextEvent(Event event) {
+            return eventQueue.getNextEvent(event);
         }
     }
 }
