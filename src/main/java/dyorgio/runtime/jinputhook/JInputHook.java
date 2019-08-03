@@ -194,7 +194,7 @@ public final class JInputHook {
                             public void run() {
                                 final Event event = new Event();
                                 boolean updateDevices;
-                                int loopingCount = 0;
+                                int loopingCount;
                                 Keyboard keyboard;
                                 KeyboardEventQueue eventQueue;
 
@@ -206,8 +206,8 @@ public final class JInputHook {
                                                 keyboard = keyboardState.keyboard;
                                                 eventQueue = keyboardState.eventQueue;
                                                 if (keyboard.poll()) {
-                                                    loopingCount = 0;
                                                     if (eventQueue.getNextEvent(event)) {
+                                                        loopingCount = 0;
                                                         do {
                                                             loopingCount++;
                                                             Key key = (Key) event.getComponent().getIdentifier();
@@ -234,12 +234,9 @@ public final class JInputHook {
                                             updateInputDevices();
                                         }
                                     }
+
                                     try {
-                                        if (OSDetector.isLinux() && loopingCount == 0) {
-                                            sleep(10);
-                                        } else {
-                                            sleep(0, 1);
-                                        }
+                                        sleep(0, 1);
                                     } catch (InterruptedException ex) {
                                         Thread.currentThread().interrupt();
                                         break;
@@ -449,7 +446,7 @@ public final class JInputHook {
 
         private KeyboardState(Keyboard keyboard) {
             this.keyboard = keyboard;
-            if (OSDetector.isLinux()) {
+            if (OSDetector.isUnix()) {
                 eventQueue = new PollKeyboardEventQueue();
             } else {
                 eventQueue = new JInputKeyboardEventQueue();
@@ -503,6 +500,12 @@ public final class JInputHook {
             }
 
             lastIndex = 0;
+
+            try {
+                sleep(20);
+            } catch (InterruptedException ex) {
+                Thread.currentThread().interrupt();
+            }
             return false;
         }
 
