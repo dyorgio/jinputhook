@@ -195,7 +195,6 @@ public final class JInputHook {
                                 final Event event = new Event();
                                 boolean updateDevices;
                                 int loopingCount;
-                                Keyboard keyboard;
                                 KeyboardEventQueue eventQueue;
 
                                 while (!isInterrupted()) {
@@ -203,9 +202,8 @@ public final class JInputHook {
                                         updateDevices = false;
                                         for (KeyboardState keyboardState : keyboardStates) {
                                             try {
-                                                keyboard = keyboardState.keyboard;
-                                                eventQueue = keyboardState.eventQueue;
-                                                if (keyboard.poll()) {
+                                                if (keyboardState.keyboard.poll()) {
+                                                    eventQueue = keyboardState.eventQueue;
                                                     if (eventQueue.getNextEvent(event)) {
                                                         loopingCount = 0;
                                                         do {
