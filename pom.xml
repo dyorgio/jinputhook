@@ -64,7 +64,7 @@
         <version.jinput>2.0.9</version.jinput>
         <version.jinput-natives>2.0.7</version.jinput-natives>
         <version.jna>5.3.1</version.jna>
-        <version.junit>4.12</version.junit>
+        <version.junit>4.13.1</version.junit>
     </properties>
     
     <dependencies>
