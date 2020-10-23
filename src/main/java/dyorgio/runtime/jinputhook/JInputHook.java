@@ -1,5 +1,5 @@
 /** *****************************************************************************
- * Copyright 2019 See AUTHORS file.
+ * Copyright 2020 See AUTHORS file.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -44,6 +44,8 @@ import net.java.games.input.Event;
 import net.java.games.input.EventQueue;
 import net.java.games.input.Keyboard;
 import static dyorgio.runtime.jinputhook.Shortcut.fromKeys;
+import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 import java.util.Map.Entry;
 import net.java.games.input.Component;
 
@@ -166,7 +168,20 @@ public final class JInputHook {
                     KeyboardState currentState = null;
                     if (keyboardStates != null) {
                         for (KeyboardState state : keyboardStates) {
-                            if (state.keyboard.getName().equals(keyboard.getName())) {
+                            if (state.keyboard.getName() == null ? keyboard.getName() == null : state.keyboard.getName().equals(keyboard.getName())) {
+                                if (OSDetector.isMac()) {
+                                    try {
+                                        Field queueField = state.keyboard.getClass().getDeclaredField("queue");
+                                        queueField.setAccessible(true);
+                                        Object queue = queueField.get(state.keyboard);
+                                        Class queueClass = queue.getClass();
+                                        Method queueReleaseMethod = queueClass.getDeclaredMethod("release");
+                                        queueReleaseMethod.setAccessible(true);
+                                        queueReleaseMethod.invoke(queue);
+                                    } catch (Exception ex) {
+                                        LOGGER.log(Level.SEVERE, null, ex);
+                                    }
+                                }
                                 currentState = new KeyboardState(keyboard);
                                 currentState.keysPressed.addAll(state.keysPressed);
                                 currentState.eventQueue.updateQueue(keyboard);
@@ -382,11 +397,11 @@ public final class JInputHook {
         }
     }
 
-    private static final boolean extractMacNatives() {
+    private static boolean extractMacNatives() {
         return extractNative("/libjinput-osx.jnilib", System.mapLibraryName("jinput-osx"));
     }
 
-    private static final boolean extractWindowsNatives() {
+    private static boolean extractWindowsNatives() {
         if (OSDetector.isOSx86()) {
             if (extractNative("/jinput-dx8.dll")) {
                 return extractNative("/jinput-raw.dll");
@@ -397,7 +412,7 @@ public final class JInputHook {
         return false;
     }
 
-    private static final boolean extractLinuxNatives() {
+    private static boolean extractLinuxNatives() {
         if (OSDetector.isOSx86()) {
             return extractNative("/libjinput-linux.so");
         } else {
@@ -405,11 +420,11 @@ public final class JInputHook {
         }
     }
 
-    private static final boolean extractNative(final String name) {
+    private static boolean extractNative(final String name) {
         return extractNative(name, null);
     }
 
-    private static final boolean extractNative(String name, final String expectedName) {
+    private static boolean extractNative(String name, final String expectedName) {
         // Finds a stream to the native file. Change path/class if necessary
         try (final InputStream inputStream = JInputHook.class.getResourceAsStream(name)) {
             name = expectedName == null ? name : expectedName;
